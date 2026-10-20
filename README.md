@@ -20,8 +20,8 @@ Many personal finance apps require linking bank accounts, paying monthly subscri
 - **Income & Expense Recording:** Log inflows and outflows with date, category, merchant description, and dollar amounts.
 - **Monthly Category Budgets:** Configure custom monthly spending caps across six core expense categories (`Housing & Utilities`, `Groceries & Dining`, `Transport & Transit`, `Health & Wellness`, `Subscriptions & Tech`, and `Leisure & Culture`) with color-coded progress bars.
 - **Interactive SVG Spending Analytics:** Real-time SVG donut chart and category utilization breakdown alongside Monthly Income, Monthly Expenses, Net Cashflow, and Savings Rate KPIs.
-- **Multi-Faceted Ledger Filtering:** Filter transactions by month (`2026-10`, `2026-09`, or `All Dates`), category, or live keyword search.
-- **RFC 4180 CSV Export:** Download your currently filtered transaction ledger as a standard `.csv` spreadsheet file with proper quote escaping.
+- **Multi-Faceted Ledger Filtering:** Filter transactions by dynamically derived transaction months (sorted newest-first across any year/month range, or `All Dates`), category, or live keyword search.
+- **RFC 4180 CSV Export with Formula Injection Protection:** Download your currently filtered transaction ledger as a standard `.csv` spreadsheet file with RFC 4180 quote/newline escaping and automatic neutralization of dangerous spreadsheet formula prefixes (`=`, `+`, `-`, `@`, `\t`, `\r`, `|`).
 - **Resettable Demo Mode:** Preloaded with realistic October 2026 sample transactions so you can explore charts and budgets immediately, plus one-click **Reset Demo Data** or **Clear Ledger** controls.
 
 ---
@@ -47,13 +47,13 @@ Many personal finance apps require linking bank accounts, paying monthly subscri
 - **Styling:** Tailwind CSS (Emerald & Slate financial ledger theme)
 - **Charts:** Custom zero-dependency SVG Donut & Progress Visualization
 - **Icons:** Lucide React
-- **Build & Testing:** Vite 5, Vitest, React Testing Library, ESLint
+- **Build & Testing:** Vite 6, Vitest 4, React Testing Library, ESLint
 
 ---
 
 ## Requirements & Installation
 
-- **Node.js:** v18.18+ or v20+
+- **Node.js:** v20+ LTS recommended (v18.18+ supported for build/runtime)
 - **npm:** v9+
 
 ```bash

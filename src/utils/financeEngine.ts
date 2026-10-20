@@ -305,19 +305,21 @@ export function formatCurrency(amount: number): string {
   })}`;
 }
 
-const DANGEROUS_CSV_PREFIX_REGEX = /^[=+\-@\t\r]|^[\s]*[=+\-@]/;
+const DANGEROUS_CSV_PREFIX_REGEX = /^[\s]*[=+\-@\t\r|]/;
 
 /**
- * Neutralizes spreadsheet formula injection prefixes (=, +, -, @, tab, CR)
- * and applies RFC 4180 CSV quoting.
+ * Neutralizes spreadsheet formula injection prefixes (=, +, -, @, tab, CR, pipe, including after leading whitespace)
+ * and applies RFC 4180 CSV quoting while preserving genuine numeric values.
  */
 export function sanitizeCsvCell(
   val: string | number | undefined,
   options?: { isNumericField?: boolean }
 ): string {
+  const isNumeric =
+    options?.isNumericField ?? (typeof val === 'number' && Number.isFinite(val));
   const raw = String(val ?? '');
   const neutralized =
-    !options?.isNumericField && DANGEROUS_CSV_PREFIX_REGEX.test(raw)
+    !isNumeric && DANGEROUS_CSV_PREFIX_REGEX.test(raw)
       ? `'${raw}`
       : raw;
 
