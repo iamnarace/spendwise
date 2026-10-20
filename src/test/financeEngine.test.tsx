@@ -57,7 +57,7 @@ describe('SpendWise Personal Finance Engine & UI Tests', () => {
     expect(csv).toContain('18.50');
   });
 
-  it('neutralizes CSV formula injection prefixes (=, +, -, @, tab, CR) while preserving valid CSV escaping', () => {
+  it('neutralizes CSV formula injection prefixes (=, +, -, @, tab, CR, pipe, leading whitespace) while preserving numeric values and RFC 4180 escaping', () => {
     expect(sanitizeCsvCell('=1+1')).toBe("'=1+1");
     expect(sanitizeCsvCell('+cmd|\' /C calc\'!A0')).toBe("'+cmd|' /C calc'!A0");
     expect(sanitizeCsvCell('-2+3+cmd|\' /C calc\'!A0')).toBe("'-2+3+cmd|' /C calc'!A0");
@@ -65,6 +65,19 @@ describe('SpendWise Personal Finance Engine & UI Tests', () => {
     expect(sanitizeCsvCell('\t=1+1')).toBe("'\t=1+1");
     expect(sanitizeCsvCell('\r=1+1')).toBe('"\'\r=1+1"');
     expect(sanitizeCsvCell('  =1+1')).toBe("'  =1+1");
+    expect(sanitizeCsvCell('  \t=1+1')).toBe("'  \t=1+1");
+    expect(sanitizeCsvCell('|cmd')).toBe("'|cmd");
+
+    // Genuine numeric values (positive and negative) remain unprefixed numbers
+    expect(sanitizeCsvCell(125.5)).toBe('125.5');
+    expect(sanitizeCsvCell(-42.75)).toBe('-42.75');
+    expect(sanitizeCsvCell('-42.75', { isNumericField: true })).toBe('-42.75');
+
+    // Cells with embedded newlines, commas, and double quotes are RFC 4180 quoted
+    expect(sanitizeCsvCell('Line 1\nLine 2, "quoted"')).toBe(
+      '"Line 1\nLine 2, ""quoted"""'
+    );
+    expect(sanitizeCsvCell('=1+1\nLine 2')).toBe('"\'=1+1\nLine 2"');
 
     // Combined formula prefix + RFC 4180 comma & quotes
     expect(
