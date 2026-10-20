@@ -243,6 +243,56 @@ export function computeLedgerMetrics(
   };
 }
 
+const MONTH_SHORT_NAMES = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+] as const;
+
+/**
+ * Derives sorted unique YYYY-MM month strings (newest first) from available transactions.
+ */
+export function getAvailableMonths(
+  transactions: Transaction[],
+  fallbackMonth?: string
+): string[] {
+  const monthSet = new Set<string>();
+  for (const tx of transactions) {
+    if (typeof tx.date === 'string' && /^\d{4}-\d{2}/.test(tx.date)) {
+      monthSet.add(tx.date.slice(0, 7));
+    }
+  }
+  if (
+    monthSet.size === 0 &&
+    fallbackMonth &&
+    /^\d{4}-\d{2}$/.test(fallbackMonth)
+  ) {
+    monthSet.add(fallbackMonth);
+  }
+  return Array.from(monthSet).sort((a, b) => b.localeCompare(a));
+}
+
+/**
+ * Formats a YYYY-MM month key into a human-readable label (e.g. "2026-10" -> "Oct 2026").
+ */
+export function formatMonthLabel(monthKey: string): string {
+  const match = /^(\d{4})-(\d{2})$/.exec(monthKey);
+  if (!match) return monthKey;
+  const year = match[1];
+  const monthIndex = Number(match[2]) - 1;
+  if (monthIndex < 0 || monthIndex > 11) return monthKey;
+  return `${MONTH_SHORT_NAMES[monthIndex]} ${year}`;
+}
+
 /**
  * Formats currency amount in USD/AUD style ($1,234.50).
  */
@@ -255,28 +305,47 @@ export function formatCurrency(amount: number): string {
   })}`;
 }
 
+const DANGEROUS_CSV_PREFIX_REGEX = /^[=+\-@\t\r]|^[\s]*[=+\-@]/;
+
 /**
- * Generates an RFC 4180 compliant CSV string from a transaction array.
+ * Neutralizes spreadsheet formula injection prefixes (=, +, -, @, tab, CR)
+ * and applies RFC 4180 CSV quoting.
+ */
+export function sanitizeCsvCell(
+  val: string | number | undefined,
+  options?: { isNumericField?: boolean }
+): string {
+  const raw = String(val ?? '');
+  const neutralized =
+    !options?.isNumericField && DANGEROUS_CSV_PREFIX_REGEX.test(raw)
+      ? `'${raw}`
+      : raw;
+
+  if (
+    neutralized.includes(',') ||
+    neutralized.includes('"') ||
+    neutralized.includes('\n') ||
+    neutralized.includes('\r')
+  ) {
+    return `"${neutralized.replace(/"/g, '""')}"`;
+  }
+  return neutralized;
+}
+
+/**
+ * Generates an RFC 4180 compliant, formula-injection-safe CSV string from a transaction array.
  */
 export function exportTransactionsToCsv(transactions: Transaction[]): string {
-  const escapeCell = (val: string | number | undefined): string => {
-    const str = String(val ?? '');
-    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-      return `"${str.replace(/"/g, '""')}"`;
-    }
-    return str;
-  };
-
   const headers = ['ID', 'Date', 'Type', 'Category', 'Description', 'Amount', 'Notes'];
   const rows = transactions.map((tx) =>
     [
-      escapeCell(tx.id),
-      escapeCell(tx.date),
-      escapeCell(tx.type),
-      escapeCell(tx.category),
-      escapeCell(tx.description),
-      escapeCell(tx.amount.toFixed(2)),
-      escapeCell(tx.notes ?? ''),
+      sanitizeCsvCell(tx.id),
+      sanitizeCsvCell(tx.date),
+      sanitizeCsvCell(tx.type),
+      sanitizeCsvCell(tx.category),
+      sanitizeCsvCell(tx.description),
+      sanitizeCsvCell(tx.amount.toFixed(2), { isNumericField: true }),
+      sanitizeCsvCell(tx.notes ?? ''),
     ].join(',')
   );
 

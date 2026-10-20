@@ -27,6 +27,8 @@ import {
   computeLedgerMetrics,
   formatCurrency,
   exportTransactionsToCsv,
+  getAvailableMonths,
+  formatMonthLabel,
 } from './utils/financeEngine';
 
 const STORAGE_TX_KEY = 'spendwise_transactions_v1';
@@ -59,11 +61,26 @@ export function App() {
   // View Tab
   const [activeView, setActiveView] = useState<'overview' | 'budgets'>('overview');
 
+  // Derive available months dynamically from transactions
+  const availableMonths = useMemo(
+    () => getAvailableMonths(transactions),
+    [transactions]
+  );
+
   // Filter state
-  const [selectedMonth, setSelectedMonth] = useState<string>('2026-10');
+  const [selectedMonth, setSelectedMonth] = useState<string>(
+    () => getAvailableMonths(transactions)[0] ?? 'ALL'
+  );
   const [selectedCategory, setSelectedCategory] = useState<ExpenseCategory | 'ALL'>('ALL');
   const [selectedType, setSelectedType] = useState<TransactionType | 'ALL'>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
+
+  // Keep selectedMonth valid when availableMonths changes
+  useEffect(() => {
+    if (selectedMonth !== 'ALL' && !availableMonths.includes(selectedMonth)) {
+      setSelectedMonth(availableMonths[0] ?? 'ALL');
+    }
+  }, [availableMonths, selectedMonth]);
 
   // New transaction form state
   const [txType, setTxType] = useState<TransactionType>('expense');
@@ -144,6 +161,10 @@ export function App() {
     };
 
     setTransactions((prev) => [newTx, ...prev]);
+    const txMonth = newTx.date.slice(0, 7);
+    if (selectedMonth !== 'ALL' && /^\d{4}-\d{2}$/.test(txMonth) && txMonth !== selectedMonth) {
+      setSelectedMonth(txMonth);
+    }
     setTxDesc('');
     setTxAmount('');
     setTxNotes('');
@@ -727,8 +748,11 @@ export function App() {
                       onChange={(e) => setSelectedMonth(e.target.value)}
                       className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs bg-white font-mono"
                     >
-                      <option value="2026-10">Oct 2026</option>
-                      <option value="2026-09">Sep 2026</option>
+                      {availableMonths.map((monthKey) => (
+                        <option key={monthKey} value={monthKey}>
+                          {formatMonthLabel(monthKey)}
+                        </option>
+                      ))}
                       <option value="ALL">All Dates</option>
                     </select>
                   </div>
